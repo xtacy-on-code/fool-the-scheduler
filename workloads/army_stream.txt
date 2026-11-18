@@ -1,0 +1,5 @@
+# Process army, stream version: the attacker keeps creating fresh short processes
+# (one every 8 ms, each needing 6 ms of CPU).  Slide 12: "a new job enters at the
+# highest priority queue", so every newcomer jumps ahead of the long-running victim.
+victim  0  0  100  cpu 100000
+army    1  0  100  every=8 count=375 cpu 6

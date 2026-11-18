@@ -1,0 +1,2 @@
+cgroup controllers before: {'user@/cgroup.controllers': 'cpu memory pids', 'user@/cgroup.subtree_control': 'cpu memory pids', 'user@/app.slice/cgroup.subtree_control': 'memory pids'}
+cgroup controllers after:  {'user@/cgroup.controllers': 'cpu memory pids', 'user@/cgroup.subtree_control': 'cpu memory pids', 'user@/app.slice/cgroup.subtree_control': 'cpu memory pids'}

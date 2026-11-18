@@ -1,0 +1,532 @@
+diff -ruN -x .git -x '*.o' -x '*.d' -x '*.asm' -x '*.sym' -x kernel/kernel -x '_*' -x fs.img -x mkfs -x usys.S -x 'initcode*' xv6up/Makefile xv6-riscv/Makefile
+--- a/Makefile	2026-11-17 18:06:33.357298982 +0000
++++ xv6-riscv/Makefile	2026-11-17 17:50:08.567416604 +0000
+@@ -132,6 +132,7 @@
+ 
+ UPROGS=\
+ 	$U/_cat\
++	$U/_schedtest\
+ 	$U/_echo\
+ 	$U/_forktest\
+ 	$U/_grep\
+diff -ruN -x .git -x '*.o' -x '*.d' -x '*.asm' -x '*.sym' -x kernel/kernel -x '_*' -x fs.img -x mkfs -x usys.S -x 'initcode*' xv6up/kernel/defs.h xv6-riscv/kernel/defs.h
+--- a/kernel/defs.h	2026-11-17 18:06:33.357515331 +0000
++++ xv6-riscv/kernel/defs.h	2026-11-17 17:50:08.563348376 +0000
+@@ -100,6 +100,8 @@
+ int             kwait(uint64);
+ void            wakeup(void*);
+ void            yield(void);
++int             mlfq_tick(struct proc *);
++int             mlfq_pstat(int, uint64);
+ int             either_copyout(int user_dst, uint64 dst, void *src, uint64 len);
+ int             either_copyin(void *dst, int user_src, uint64 src, uint64 len);
+ void            procdump(void);
+Binary files xv6up/kernel/kernel and xv6-riscv/kernel/kernel differ
+diff -ruN -x .git -x '*.o' -x '*.d' -x '*.asm' -x '*.sym' -x kernel/kernel -x '_*' -x fs.img -x mkfs -x usys.S -x 'initcode*' xv6up/kernel/param.h xv6-riscv/kernel/param.h
+--- a/kernel/param.h	2026-11-17 18:06:33.357515331 +0000
++++ xv6-riscv/kernel/param.h	2026-11-18 07:49:55.168479548 +0000
+@@ -1,3 +1,10 @@
++// mlfq
++#define NLEVEL        3        // slices 1,2,4 ticks
++#define TICK_INTERVAL 100000   // 10 ms at 10 MHz
++#define SF_MLFQ    1
++#define SF_ACCT    2  // allotment
++#define SF_PRECISE 4  // charge real time not ticks
++#define SF_FAIR    8  // least cpu first in a queue
+ #define NPROC       64                // maximum number of processes
+ #define NCPU        8                 // maximum number of CPUs
+ #define NOFILE      16                // open files per process
+diff -ruN -x .git -x '*.o' -x '*.d' -x '*.asm' -x '*.sym' -x kernel/kernel -x '_*' -x fs.img -x mkfs -x usys.S -x 'initcode*' xv6up/kernel/proc.c xv6-riscv/kernel/proc.c
+--- a/kernel/proc.c	2026-11-17 18:06:33.357515331 +0000
++++ xv6-riscv/kernel/proc.c	2026-11-18 07:49:55.167073776 +0000
+@@ -10,6 +10,8 @@
+ 
+ struct proc proc[NPROC];
+ 
++static uint64 vclock = 0;
++
+ struct proc *initproc;
+ 
+ int nextpid = 1;
+@@ -124,6 +126,12 @@
+ found:
+   p->pid = allocpid();
+   p->state = USED;
++  // new jobs start at the top
++  p->level = 0;
++  p->slice_ticks = p->level_ticks = 0;
++  p->level_time = p->cpu_time = p->cpu_ticks = 0;
++  p->nsched = 0;
++  p->vruntime = vclock;
+ 
+   // Allocate a trapframe page.
+   if ((p->trapframe = (struct trapframe *)kalloc()) == 0) {
+@@ -425,6 +433,106 @@
+ //  - swtch to start running that process.
+ //  - eventually that process transfers control
+ //    via swtch back to the scheduler.
++// set by schedctl()
++int sched_flags = 0;
++int boost_ticks = 0;
++int boost_pending = 0;
++static uint64 dispatch_count = 0;
++
++static uint64
++quantum_time(int level)
++{
++  return (uint64)(1 << level) * TICK_INTERVAL;
++}
++
++static void
++demote(struct proc *p)
++{
++  if (p->level < NLEVEL - 1)
++    p->level++;
++  p->level_ticks = 0;
++  p->level_time = 0;
++}
++
++// p->lock held
++static void
++run(struct cpu *c, struct proc *p)
++{
++  p->state = RUNNING;
++  c->proc = p;
++  p->slice_ticks = 0;
++  p->lastrun = ++dispatch_count;
++  p->nsched++;
++  p->run_start = r_time();
++  swtch(&c->context, &p->context);
++  // Don't re-enable interrupts on release.
++  mycpu()->intena = 0;
++  c->proc = 0;
++
++  uint64 used = r_time() - p->run_start;
++  p->cpu_time += used;
++  p->vruntime += used;
++  vclock = p->vruntime;
++  if ((sched_flags & SF_MLFQ) && (sched_flags & SF_PRECISE)) {
++    p->level_time += used;
++    if (p->level_time + TICK_INTERVAL / 50 >= quantum_time(p->level))
++      demote(p);
++  }
++}
++
++// timer tick while p runs, 1 = yield
++int
++mlfq_tick(struct proc *p)
++{
++  int give_up = 0;
++  acquire(&p->lock);
++  p->cpu_ticks++;
++  if (!(sched_flags & SF_MLFQ)) {
++    release(&p->lock);
++    return 1;
++  }
++  int level = p->level;
++  int quantum = 1 << level;
++  if (sched_flags & SF_PRECISE) {
++    // real charge happens in run()
++    uint64 so_far = p->level_time + (r_time() - p->run_start);
++    if (so_far + TICK_INTERVAL / 50 >= quantum_time(level))
++      give_up = 1;
++  } else if (sched_flags & SF_ACCT) {
++    p->level_ticks++;
++    if (p->level_ticks >= quantum) {
++      demote(p);
++      give_up = 1;
++    }
++  } else {
++    p->slice_ticks++;
++    if (p->slice_ticks >= quantum) {
++      demote(p);
++      give_up = 1;
++    }
++  }
++  release(&p->lock);
++
++  // preempt if someone higher is waiting
++  if (!give_up) {
++    for (struct proc *q = proc; q < &proc[NPROC]; q++) {
++      if (q == p) continue;
++      acquire(&q->lock);
++      int better = q->state == RUNNABLE && q->level < level;
++      release(&q->lock);
++      if (better) { give_up = 1; break; }
++    }
++  }
++  return give_up;
++}
++
++// Per-CPU process scheduler.
++// Each CPU calls scheduler() after setting itself up.
++// Scheduler never returns.  It loops, doing:
++//  - choose a process to run.
++//  - swtch to start running that process.
++//  - eventually that process transfers control
++//    via swtch back to the scheduler.
+ void
+ scheduler(void)
+ {
+@@ -441,26 +549,48 @@
+     intr_on();
+     intr_off();
+ 
++    if (boost_pending) { // boost
++      boost_pending = 0;
++      for (p = proc; p < &proc[NPROC]; p++) {
++        acquire(&p->lock);
++        p->level = 0;
++        p->level_ticks = 0;
++        p->level_time = 0;
++        release(&p->lock);
++      }
++    }
++
+     int found = 0;
+-    for (p = proc; p < &proc[NPROC]; p++) {
+-      acquire(&p->lock);
+-      if (p->state == RUNNABLE) {
+-        // Switch to chosen process.  It is the process's job
+-        // to release its lock and then reacquire it
+-        // before jumping back to us.
+-        p->state = RUNNING;
+-        c->proc = p;
+-        swtch(&c->context, &p->context);
+-
+-        // Don't re-enable interrupts on release.
+-        mycpu()->intena = 0;
+-
+-        // Process is done running for now.
+-        // It should have changed its p->state before coming back.
+-        c->proc = 0;
+-        found = 1;
++    if (sched_flags & SF_MLFQ) {
++      // highest queue, then rr (or least cpu with SF_FAIR)
++      struct proc *best = 0;
++      for (p = proc; p < &proc[NPROC]; p++) {
++        acquire(&p->lock);
++        if (p->state == RUNNABLE &&
++            (best == 0 || p->level < best->level ||
++             (p->level == best->level &&
++              ((sched_flags & SF_FAIR) ? p->vruntime < best->vruntime
++                                       : p->lastrun < best->lastrun))))
++          best = p;
++        release(&p->lock);
++      }
++      if (best) {
++        acquire(&best->lock);
++        if (best->state == RUNNABLE) {
++          run(c, best);
++          found = 1;
++        }
++        release(&best->lock);
++      }
++    } else {
++      for (p = proc; p < &proc[NPROC]; p++) {
++        acquire(&p->lock);
++        if (p->state == RUNNABLE) {
++          run(c, p);
++          found = 1;
++        }
++        release(&p->lock);
+       }
+-      release(&p->lock);
+     }
+     if (found == 0) {
+       // nothing to run; stop running on this core until an interrupt.
+@@ -469,6 +599,27 @@
+   }
+ }
+ 
++// out: level, ticks, real cpu us, dispatches
++int
++mlfq_pstat(int pid, uint64 addr)
++{
++  struct proc *p;
++  uint64 out[4];
++  for (p = proc; p < &proc[NPROC]; p++) {
++    acquire(&p->lock);
++    if (p->pid == pid && p->state != UNUSED) {
++      out[0] = p->level;
++      out[1] = p->cpu_ticks;
++      out[2] = p->cpu_time / 10;
++      out[3] = p->nsched;
++      release(&p->lock);
++      return copyout(myproc()->pagetable, myproc()->sz, addr, (char *)out, sizeof(out));
++    }
++    release(&p->lock);
++  }
++  return -1;
++}
++
+ // Switch to scheduler.  Must hold only p->lock
+ // and have changed proc->state. Saves and restores
+ // intena because intena is a property of this
+diff -ruN -x .git -x '*.o' -x '*.d' -x '*.asm' -x '*.sym' -x kernel/kernel -x '_*' -x fs.img -x mkfs -x usys.S -x 'initcode*' xv6up/kernel/proc.h xv6-riscv/kernel/proc.h
+--- a/kernel/proc.h	2026-11-17 18:06:33.357515331 +0000
++++ xv6-riscv/kernel/proc.h	2026-11-18 07:49:55.168070931 +0000
+@@ -101,4 +101,16 @@
+   struct file *ofile[NOFILE];  // Open files
+   struct inode *cwd;           // Current directory
+   char name[16];               // Process name (debugging)
++
++  // mlfq stuff
++  int level;  // 0 = top
++  int slice_ticks;
++  int level_ticks;
++  uint64 level_time;
++  uint64 run_start;
++  uint64 lastrun;
++  uint64 cpu_time;  // real cpu, 100ns units
++  uint64 cpu_ticks;  // what tick sampling sees
++  int nsched;
++  uint64 vruntime;
+ };
+diff -ruN -x .git -x '*.o' -x '*.d' -x '*.asm' -x '*.sym' -x kernel/kernel -x '_*' -x fs.img -x mkfs -x usys.S -x 'initcode*' xv6up/kernel/start.c xv6-riscv/kernel/start.c
+--- a/kernel/start.c	2026-11-17 18:06:33.357515331 +0000
++++ xv6-riscv/kernel/start.c	2026-11-17 17:50:08.564984134 +0000
+@@ -62,5 +62,5 @@
+   w_mcounteren(r_mcounteren() | 2);
+ 
+   // ask for the very first timer interrupt.
+-  w_stimecmp(r_time() + 1000000);
++  w_stimecmp(r_time() + TICK_INTERVAL);
+ }
+diff -ruN -x .git -x '*.o' -x '*.d' -x '*.asm' -x '*.sym' -x kernel/kernel -x '_*' -x fs.img -x mkfs -x usys.S -x 'initcode*' xv6up/kernel/syscall.c xv6-riscv/kernel/syscall.c
+--- a/kernel/syscall.c	2026-11-17 18:06:33.357515331 +0000
++++ xv6-riscv/kernel/syscall.c	2026-11-17 17:50:08.566686380 +0000
+@@ -95,6 +95,9 @@
+ extern uint64 sys_sbrk(void);
+ extern uint64 sys_pause(void);
+ extern uint64 sys_uptime(void);
++extern uint64 sys_schedctl(void);
++extern uint64 sys_pstat(void);
++extern uint64 sys_rtime(void);
+ extern uint64 sys_open(void);
+ extern uint64 sys_write(void);
+ extern uint64 sys_mknod(void);
+@@ -122,6 +125,9 @@
+   [SYS_sbrk]    = sys_sbrk,
+   [SYS_pause]   = sys_pause,
+   [SYS_uptime]  = sys_uptime,
++[SYS_schedctl] = sys_schedctl,
++[SYS_pstat]   = sys_pstat,
++[SYS_rtime]   = sys_rtime,
+   [SYS_open]    = sys_open,
+   [SYS_write]   = sys_write,
+   [SYS_mknod]   = sys_mknod,
+diff -ruN -x .git -x '*.o' -x '*.d' -x '*.asm' -x '*.sym' -x kernel/kernel -x '_*' -x fs.img -x mkfs -x usys.S -x 'initcode*' xv6up/kernel/syscall.h xv6-riscv/kernel/syscall.h
+--- a/kernel/syscall.h	2026-11-17 18:06:33.357515331 +0000
++++ xv6-riscv/kernel/syscall.h	2026-11-17 17:50:08.566398446 +0000
+@@ -20,4 +20,7 @@
+ #define SYS_link   19
+ #define SYS_mkdir  20
+ #define SYS_close  21
++#define SYS_schedctl 23
++#define SYS_pstat  24
++#define SYS_rtime  25
+ #define SYS_sync   22
+diff -ruN -x .git -x '*.o' -x '*.d' -x '*.asm' -x '*.sym' -x kernel/kernel -x '_*' -x fs.img -x mkfs -x usys.S -x 'initcode*' xv6up/kernel/sysproc.c xv6-riscv/kernel/sysproc.c
+--- a/kernel/sysproc.c	2026-11-17 18:06:33.357515331 +0000
++++ xv6-riscv/kernel/sysproc.c	2026-11-18 07:49:55.169626307 +0000
+@@ -110,3 +110,37 @@
+   release(&tickslock);
+   return xticks;
+ }
++
++// mlfq syscalls
++
++extern int sched_flags, boost_ticks;
++
++// schedctl(flags, boost_ticks)
++uint64
++sys_schedctl(void)
++{
++  int flags, boost;
++  argint(0, &flags);
++  argint(1, &boost);
++  sched_flags = flags;
++  boost_ticks = boost;
++  return 0;
++}
++
++// pstat(pid, out[4])
++uint64
++sys_pstat(void)
++{
++  int pid;
++  uint64 addr;
++  argint(0, &pid);
++  argaddr(1, &addr);
++  return mlfq_pstat(pid, addr);
++}
++
++// rtime(): time csr in us
++uint64
++sys_rtime(void)
++{
++  return r_time() / 10;
++}
+diff -ruN -x .git -x '*.o' -x '*.d' -x '*.asm' -x '*.sym' -x kernel/kernel -x '_*' -x fs.img -x mkfs -x usys.S -x 'initcode*' xv6up/kernel/trap.c xv6-riscv/kernel/trap.c
+--- a/kernel/trap.c	2026-11-17 18:06:33.357515331 +0000
++++ xv6-riscv/kernel/trap.c	2026-11-18 07:49:55.169022173 +0000
+@@ -81,8 +81,8 @@
+   if (killed(p))
+     kexit(-1);
+ 
+-  // give up the CPU if this is a timer interrupt.
+-  if (which_dev == 2)
++  // timer: yield only if the policy says so
++  if (which_dev == 2 && mlfq_tick(p))
+     yield();
+ 
+   prepare_return();
+@@ -154,7 +154,7 @@
+   }
+ 
+   // give up the CPU if this is a timer interrupt.
+-  if (which_dev == 2 && myproc() != 0)
++  if (which_dev == 2 && myproc() != 0 && mlfq_tick(myproc()))
+     yield();
+ 
+   // the yield() may have caused some traps to occur,
+@@ -163,12 +163,16 @@
+   w_sstatus(sstatus);
+ }
+ 
++extern int boost_ticks, boost_pending;
++
+ void
+ clockintr()
+ {
+   if (cpuid() == 0) {
+     acquire(&tickslock);
+     ticks++;
++    if (boost_ticks > 0 && ticks % boost_ticks == 0)
++      boost_pending = 1;
+     wakeup(&ticks);
+     release(&tickslock);
+   }
+@@ -176,7 +180,7 @@
+   // ask for the next timer interrupt. this also clears
+   // the interrupt request. 1000000 is about a tenth
+   // of a second.
+-  w_stimecmp(r_time() + 1000000);
++  w_stimecmp(r_time() + TICK_INTERVAL);
+ }
+ 
+ // check if it's an external interrupt or software interrupt,
+diff -ruN -x .git -x '*.o' -x '*.d' -x '*.asm' -x '*.sym' -x kernel/kernel -x '_*' -x fs.img -x mkfs -x usys.S -x 'initcode*' xv6up/user/schedtest.c xv6-riscv/user/schedtest.c
+--- a/user/schedtest.c	1970-01-01 00:00:00.000000000 +0000
++++ xv6-riscv/user/schedtest.c	2026-11-18 07:49:55.166384024 +0000
+@@ -0,0 +1,85 @@
++// schedtest flags boost secs attack_pct [hogs]
++// flags: 0 rr, 1 mlfq, 3 +allotment, 7 +precise, 15 +fair
++// attacker sleeps over every tick so tick accounting never sees it
++#include "kernel/types.h"
++#include "kernel/stat.h"
++#include "user/user.h"
++
++#define TICK_US 10000
++
++static void
++hog(void)
++{
++  volatile unsigned long x = 0;
++  for (;;)
++    x++;
++}
++
++static void
++attacker(int pct)
++{
++  uint64 run_us = (uint64)TICK_US * pct / 100;
++  volatile unsigned long x = 0;
++  for (;;) {
++    pause(1); // wake right after a tick
++    uint64 t = rtime();
++    while (rtime() - t < run_us)
++      x++;
++  }   // asleep again before the next one
++}
++
++int
++main(int argc, char *argv[])
++{
++  if (argc < 5) {
++    printf("usage: schedtest flags boost_ticks seconds attack_pct [hogs]\n");
++    exit(1);
++  }
++  int flags = atoi(argv[1]);
++  int boost = atoi(argv[2]);
++  int secs = atoi(argv[3]);
++  int pct = atoi(argv[4]);
++  int nhogs = argc > 5 ? atoi(argv[5]) : 2;
++
++  schedctl(flags, boost);
++  int pids[8], n = 0;
++  for (int i = 0; i < nhogs && n < 7; i++) {
++    int pid = fork();
++    if (pid == 0)
++      hog();
++    pids[n++] = pid;
++  }
++  if (pct > 0) {
++    int pid = fork();
++    if (pid == 0)
++      attacker(pct);
++    pids[n++] = pid;
++  }
++
++  pause(secs * 100);
++
++  uint64 st[8][4];
++  for (int i = 0; i < n; i++)
++    pstat(pids[i], st[i]);
++  for (int i = 0; i < n; i++)
++    kill(pids[i]);
++  for (int i = 0; i < n; i++)
++    wait(0);
++  schedctl(0, 0);
++
++  uint64 tot_us = 0, tot_ticks = 0;
++  for (int i = 0; i < n; i++) {
++    tot_us += st[i][2];
++    tot_ticks += st[i][1];
++  }
++  for (int i = 0; i < n; i++) {
++    int is_att = (pct > 0 && i == n - 1);
++    printf("RESULT flags=%d boost=%d pct=%d role=%s true_us=%d ticks=%d level=%d sched=%d true_pm=%d ticks_pm=%d\n",
++           flags, boost, pct, is_att ? "attacker" : "honest",
++           (int)st[i][2], (int)st[i][1], (int)st[i][0], (int)st[i][3],
++           tot_us ? (int)(st[i][2] * 1000 / tot_us) : 0,
++           tot_ticks ? (int)(st[i][1] * 1000 / tot_ticks) : 0);
++  }
++  printf("DONE\n");
++  exit(0);
++}
+diff -ruN -x .git -x '*.o' -x '*.d' -x '*.asm' -x '*.sym' -x kernel/kernel -x '_*' -x fs.img -x mkfs -x usys.S -x 'initcode*' xv6up/user/user.h xv6-riscv/user/user.h
+--- a/user/user.h	2026-11-17 18:06:33.359425693 +0000
++++ xv6-riscv/user/user.h	2026-11-17 17:50:08.567176751 +0000
+@@ -24,6 +24,9 @@
+ char *sys_sbrk(int, int);
+ int pause(int);
+ int uptime(void);
++int schedctl(int, int);
++int pstat(int, uint64 *);
++uint64 rtime(void);
+ int sync(void);
+ 
+ // ulib.c
+diff -ruN -x .git -x '*.o' -x '*.d' -x '*.asm' -x '*.sym' -x kernel/kernel -x '_*' -x fs.img -x mkfs -x usys.S -x 'initcode*' xv6up/user/usys.pl xv6-riscv/user/usys.pl
+--- a/user/usys.pl	2026-11-17 18:06:33.359425693 +0000
++++ xv6-riscv/user/usys.pl	2026-11-17 17:50:08.566915499 +0000
+@@ -42,4 +42,7 @@
+ entry("sbrk");
+ entry("pause");
+ entry("uptime");
++entry("schedctl");
++entry("pstat");
++entry("rtime");
+ entry("sync");

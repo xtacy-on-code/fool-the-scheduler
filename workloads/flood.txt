@@ -1,0 +1,5 @@
+# Slide 16: a CPU-bound job versus 4 interactive jobs.
+# Each interactive job computes 3 ms then waits 9 ms for I/O -> each wants 25% of the CPU,
+# together they want 100%, and they never use a full 8 ms slice, so under MLFQ they stay on top.
+cpujob     0  0  100  cpu 100000
+interactive 1  0  100  every=0 count=4 inter 3 9

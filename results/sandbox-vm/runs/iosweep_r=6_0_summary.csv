@@ -1,0 +1,4 @@
+job,name,group,cpu_ms,first_run,finish,resp_avg,resp_max,resp_n,dispatches
+0,honest#0,0,234.065,0.004,-1.000,0.001,0.001,1,197
+1,honest#1,0,234.912,8.158,-1.000,8.155,8.155,1,197
+2,attacker,1,2381.883,16.372,-1.000,0.114,16.368,393,394

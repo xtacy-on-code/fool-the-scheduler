@@ -1,0 +1,6 @@
+job,name,group,cpu_ms,first_run,finish,resp_avg,resp_max,resp_n,dispatches
+0,cpujob,0,1768.891,0.478,-1.000,-1.000,0.000,0,0
+1,interactive#0,1,300.002,0.479,-1.000,-1.000,0.000,0,0
+2,interactive#1,1,302.934,0.479,-1.000,-1.000,0.000,0,0
+3,interactive#2,1,302.946,0.479,-1.000,-1.000,0.000,0,0
+4,interactive#3,1,302.940,0.480,-1.000,-1.000,0.000,0,0

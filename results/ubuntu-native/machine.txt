@@ -1,0 +1,7 @@
+label: ubuntu-native
+kernel: 7.0.0-28-generic
+cpus: 32
+cpu: 13th Gen Intel(R) Core(TM) i9-13980HX
+/proc/sys/kernel/sched_autogroup_enabled: 1
+date: 2026-11-18 12:52
+runtime_s: 511

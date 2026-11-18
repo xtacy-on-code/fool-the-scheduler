@@ -1,0 +1,2 @@
+honest 0 0 100 every=0 count=2 cpu 100000
+attacker 1 0 100 attack 7 1

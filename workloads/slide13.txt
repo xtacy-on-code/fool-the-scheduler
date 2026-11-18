@@ -1,0 +1,4 @@
+# Lecture 7, slide 13: P1 arrives at 0 needing 100 units, P2 arrives at 40 needing 12 units.
+# Queues 8/16/32 units.  1 unit = 10 ms, so run with -q 80.
+P1   0   0     100  cpu 1000
+P2   1   400   100  cpu 120

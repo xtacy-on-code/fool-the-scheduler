@@ -1,0 +1,93 @@
+rep,test,flags,boost,pct,role,true_us,ticks,level,sched,true_pm,ticks_pm
+0,xv6 round robin,0,0,90,honest,231492,200,0,200,57,500
+0,xv6 round robin,0,0,90,honest,2026805,200,0,200,499,500
+0,xv6 round robin,0,0,90,attacker,1797729,0,0,200,443,0
+0,MLFQ (tick charging),1,0,50,honest,1008667,200,1,200,250,500
+0,MLFQ (tick charging),1,0,50,honest,1013533,200,1,200,251,500
+0,MLFQ (tick charging),1,0,50,attacker,2004571,0,0,399,497,0
+0,MLFQ (tick charging),1,0,80,honest,417096,200,1,200,103,500
+0,MLFQ (tick charging),1,0,80,honest,417791,200,1,200,103,500
+0,MLFQ (tick charging),1,0,80,attacker,3195898,0,0,399,792,0
+0,MLFQ (tick charging),1,0,90,honest,214694,200,1,200,53,500
+0,MLFQ (tick charging),1,0,90,honest,213338,200,1,200,53,500
+0,MLFQ (tick charging),1,0,90,attacker,3593959,0,0,399,893,0
+0,MLFQ (tick charging),1,0,95,honest,117629,200,1,200,29,500
+0,MLFQ (tick charging),1,0,95,honest,116372,200,1,200,28,500
+0,MLFQ (tick charging),1,0,95,attacker,3792546,0,0,399,941,0
+0,MLFQ + boost,1,50,90,honest,291469,200,1,200,72,500
+0,MLFQ + boost,1,50,90,honest,219290,200,1,200,54,500
+0,MLFQ + boost,1,50,90,attacker,3521490,0,0,391,873,0
+0,MLFQ + allotment,3,0,90,honest,213775,200,2,200,53,500
+0,MLFQ + allotment,3,0,90,honest,212847,200,2,200,52,500
+0,MLFQ + allotment,3,0,90,attacker,3594175,0,0,399,893,0
+0,MLFQ + allotment + boost,3,50,90,honest,286387,200,2,200,71,500
+0,MLFQ + allotment + boost,3,50,90,honest,212881,200,2,200,52,500
+0,MLFQ + allotment + boost,3,50,90,attacker,3522026,0,0,391,875,0
+0,MLFQ + allotment + precise,7,0,90,honest,235029,202,2,201,58,505
+0,MLFQ + allotment + precise,7,0,90,honest,1989129,198,2,198,494,495
+0,MLFQ + allotment + precise,7,0,90,attacker,1797832,0,2,200,447,0
+0,MLFQ + allotment + precise + fair,15,0,90,honest,1337860,199,2,198,332,497
+0,MLFQ + allotment + precise + fair,15,0,90,honest,1338433,201,2,201,332,502
+0,MLFQ + allotment + precise + fair,15,0,90,attacker,1346003,0,2,150,334,0
+1,xv6 round robin,0,0,90,honest,224720,200,0,200,55,500
+1,xv6 round robin,0,0,90,honest,2026775,200,0,200,500,500
+1,xv6 round robin,0,0,90,attacker,1797402,0,0,200,443,0
+1,MLFQ (tick charging),1,0,50,honest,1009825,200,1,200,250,500
+1,MLFQ (tick charging),1,0,50,honest,1013440,200,1,200,251,500
+1,MLFQ (tick charging),1,0,50,attacker,2003755,0,0,399,497,0
+1,MLFQ (tick charging),1,0,80,honest,416362,200,1,200,103,500
+1,MLFQ (tick charging),1,0,80,honest,417678,200,1,200,103,500
+1,MLFQ (tick charging),1,0,80,attacker,3195519,0,0,399,793,0
+1,MLFQ (tick charging),1,0,90,honest,212980,200,1,200,52,500
+1,MLFQ (tick charging),1,0,90,honest,213836,200,1,200,53,500
+1,MLFQ (tick charging),1,0,90,attacker,3594050,0,0,399,893,0
+1,MLFQ (tick charging),1,0,95,honest,116675,200,1,200,28,500
+1,MLFQ (tick charging),1,0,95,honest,115698,200,1,200,28,500
+1,MLFQ (tick charging),1,0,95,attacker,3793229,0,0,399,942,0
+1,MLFQ + boost,1,50,90,honest,214325,200,1,200,53,500
+1,MLFQ + boost,1,50,90,honest,287029,200,1,200,71,500
+1,MLFQ + boost,1,50,90,attacker,3521885,0,0,391,875,0
+1,MLFQ + allotment,3,0,90,honest,214501,200,2,200,53,500
+1,MLFQ + allotment,3,0,90,honest,212777,200,2,200,52,500
+1,MLFQ + allotment,3,0,90,attacker,3594003,0,0,399,893,0
+1,MLFQ + allotment + boost,3,50,90,honest,213148,200,2,200,53,500
+1,MLFQ + allotment + boost,3,50,90,honest,285765,200,2,200,71,500
+1,MLFQ + allotment + boost,3,50,90,attacker,3521189,0,0,391,875,0
+1,MLFQ + allotment + precise,7,0,90,honest,234978,202,2,201,58,505
+1,MLFQ + allotment + precise,7,0,90,honest,1988690,198,2,198,494,495
+1,MLFQ + allotment + precise,7,0,90,attacker,1797829,0,2,200,447,0
+1,MLFQ + allotment + precise + fair,15,0,90,honest,1338056,199,2,198,332,497
+1,MLFQ + allotment + precise + fair,15,0,90,honest,1338860,201,2,201,332,502
+1,MLFQ + allotment + precise + fair,15,0,90,attacker,1345874,0,2,150,334,0
+2,xv6 round robin,0,0,90,honest,224669,200,0,200,55,500
+2,xv6 round robin,0,0,90,honest,2026931,200,0,200,500,500
+2,xv6 round robin,0,0,90,attacker,1797801,0,0,200,443,0
+2,MLFQ (tick charging),1,0,50,honest,1010687,200,1,200,250,500
+2,MLFQ (tick charging),1,0,50,honest,1014240,200,1,200,251,500
+2,MLFQ (tick charging),1,0,50,attacker,2002707,0,0,399,497,0
+2,MLFQ (tick charging),1,0,80,honest,416651,200,1,200,103,500
+2,MLFQ (tick charging),1,0,80,honest,417116,200,1,200,103,500
+2,MLFQ (tick charging),1,0,80,attacker,3196177,0,0,399,793,0
+2,MLFQ (tick charging),1,0,90,honest,209899,200,1,200,52,500
+2,MLFQ (tick charging),1,0,90,honest,209324,200,1,200,52,500
+2,MLFQ (tick charging),1,0,90,attacker,3593871,0,0,399,895,0
+2,MLFQ (tick charging),1,0,95,honest,101891,200,1,200,25,500
+2,MLFQ (tick charging),1,0,95,honest,100886,200,1,200,25,500
+2,MLFQ (tick charging),1,0,95,attacker,3792280,0,0,399,949,0
+2,MLFQ + boost,1,50,90,honest,286493,200,1,200,71,500
+2,MLFQ + boost,1,50,90,honest,212560,200,1,200,52,500
+2,MLFQ + boost,1,50,90,attacker,3522072,0,0,391,875,0
+2,MLFQ + allotment,3,0,90,honest,214787,200,2,200,53,500
+2,MLFQ + allotment,3,0,90,honest,214502,200,2,200,53,500
+2,MLFQ + allotment,3,0,90,attacker,3593649,0,0,399,893,0
+2,MLFQ + allotment + boost,3,50,90,honest,287333,200,2,200,71,500
+2,MLFQ + allotment + boost,3,50,90,honest,214920,200,2,200,53,500
+2,MLFQ + allotment + boost,3,50,90,attacker,3521421,0,0,391,875,0
+2,MLFQ + allotment + precise,7,0,90,honest,230533,202,2,201,57,505
+2,MLFQ + allotment + precise,7,0,90,honest,1990028,198,2,198,495,495
+2,MLFQ + allotment + precise,7,0,90,attacker,1797496,0,2,200,447,0
+2,MLFQ + allotment + precise + fair,15,0,90,honest,1336293,199,2,198,332,497
+2,MLFQ + allotment + precise + fair,15,0,90,honest,1346345,201,2,201,334,502
+2,MLFQ + allotment + precise + fair,15,0,90,attacker,1336991,0,2,149,332,0
+,"MLFQ, no attacker",1,0,0,honest,2006802,200,1,200,498,500
+,"MLFQ, no attacker",1,0,0,honest,2015426,200,1,200,501,500

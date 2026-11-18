@@ -1,0 +1,4 @@
+/usched
+/job
+*.o
+__pycache__/

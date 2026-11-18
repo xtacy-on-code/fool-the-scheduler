@@ -1,0 +1,6 @@
+# Slide 17: one attacker that runs 7 ms of every 8 ms time slice and then does 1 ms of "I/O"
+# against two honest CPU-bound jobs.
+# name     group arrival tickets kind args
+honest     0     0       100     cpu 100000
+honest     0     0       100     cpu 100000
+attacker   1     0       100     attack 7 1

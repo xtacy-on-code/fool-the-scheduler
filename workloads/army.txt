@@ -1,0 +1,3 @@
+# Process army: one honest user runs 1 CPU-bound job, the other user runs 4.
+victim  0  0  100  cpu 100000
+army    1  0  100  every=0 count=4 cpu 100000
