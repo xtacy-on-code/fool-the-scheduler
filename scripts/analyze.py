@@ -19,8 +19,7 @@ plt.rcParams.update({"font.size": 10, "axes.spines.top": False, "axes.spines.rig
                      "figure.dpi": 150, "savefig.bbox": "tight"})
 C_BAD, C_OK, C_NEU, C_ACC = "#c0392b", "#2e8b57", "#7f8c8d", "#2c6fbb"
 
-POLICIES = ["RR", "MLFQ", "MLFQ+boost", "MLFQ+acct", "MLFQ+both", "MLFQ+groups",
-            "RR+groups", "stride", "stride+groups", "Linux", "Linux+sessions"]
+POLICIES = ["RR", "MLFQ", "MLFQ+boost", "MLFQ+acct", "MLFQ+both", "MLFQ+groups", "Linux"]
 
 def load(label):
     path = os.path.join(ROOT, "results", label, "shares.csv")
@@ -272,6 +271,7 @@ fig_boost()
 bars("army", "army", 50, "Process army: 4 processes of one user vs 1 process of another", "army.png", "army's CPU share (%)")
 bars("stream", "army", 50, "Army stream: a fresh 6 ms process every 8 ms vs 1 long job", "stream.png", "army's CPU share (%)")
 fig_matrix()
+numbers["army_sessions"] = mean("army", "Linux+sessions", "army")[0]
 fig_xv6()
 fig_windows()
 fig_envs()

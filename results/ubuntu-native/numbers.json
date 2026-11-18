@@ -13,11 +13,7 @@
   "MLFQ+acct": 8.88,
   "MLFQ+both": 24.12,
   "MLFQ+groups": 15.85,
-  "RR+groups": 46.52,
-  "stride": 33.38,
-  "stride+groups": 46.52,
-  "Linux": 32.35,
-  "Linux+sessions": 32.35
+  "Linux": 32.35
  },
  "iosweep": {
   "r": [
@@ -84,11 +80,7 @@
   "MLFQ+acct": 72.37,
   "MLFQ+both": 24.38,
   "MLFQ+groups": 91.44,
-  "RR+groups": 72.83,
-  "stride": 20.01,
-  "stride+groups": 50.03,
-  "Linux": 48.4,
-  "Linux+sessions": 48.47
+  "Linux": 48.4
  },
  "boost": {
   "S": [
@@ -123,11 +115,7 @@
   "MLFQ+acct": 28.35225,
   "MLFQ+both": 2.7296666666666667,
   "MLFQ+groups": 114.93,
-  "RR+groups": 32.12116666666667,
-  "stride": 3.02225,
-  "stride+groups": 12.051833333333333,
-  "Linux": null,
-  "Linux+sessions": null
+  "Linux": null
  },
  "army_army": {
   "RR": 79.86,
@@ -136,11 +124,7 @@
   "MLFQ+acct": 79.96,
   "MLFQ+both": 79.91,
   "MLFQ+groups": 49.96,
-  "RR+groups": 49.95,
-  "stride": 80.12,
-  "stride+groups": 49.98,
-  "Linux": 80.06,
-  "Linux+sessions": 80.01
+  "Linux": 80.06
  },
  "stream_army": {
   "RR": 74.99,
@@ -149,11 +133,7 @@
   "MLFQ+acct": 75.82,
   "MLFQ+both": 75.84,
   "MLFQ+groups": 14.7,
-  "RR+groups": 42.83,
-  "stride": 75.79,
-  "stride+groups": 43.0,
-  "Linux": 77.81,
-  "Linux+sessions": 77.77
+  "Linux": 77.81
  },
  "matrix": {
   "I/O trick (slide 17)": {
@@ -163,11 +143,7 @@
    "MLFQ+acct": 136.7,
    "MLFQ+both": 113.8,
    "MLFQ+groups": 168.3,
-   "RR+groups": 107.0,
-   "stride": 99.9,
-   "stride+groups": 107.0,
-   "Linux": 101.5,
-   "Linux+sessions": 135.3
+   "Linux": 101.5
   },
   "Flood (slide 16)": {
    "RR": 235.9,
@@ -176,11 +152,7 @@
    "MLFQ+acct": 361.8,
    "MLFQ+both": 121.9,
    "MLFQ+groups": 182.9,
-   "RR+groups": 145.7,
-   "stride": 100.1,
-   "stride+groups": 100.1,
-   "Linux": 242.0,
-   "Linux+sessions": 96.9
+   "Linux": 242.0
   },
   "Process army": {
    "RR": 40.3,
@@ -189,11 +161,7 @@
    "MLFQ+acct": 40.1,
    "MLFQ+both": 40.2,
    "MLFQ+groups": 100.1,
-   "RR+groups": 100.1,
-   "stride": 39.8,
-   "stride+groups": 100.0,
-   "Linux": 39.9,
-   "Linux+sessions": 40.0
+   "Linux": 39.9
   },
   "Army stream": {
    "RR": 50.0,
@@ -202,13 +170,10 @@
    "MLFQ+acct": 48.4,
    "MLFQ+both": 48.3,
    "MLFQ+groups": 170.6,
-   "RR+groups": 114.3,
-   "stride": 48.4,
-   "stride+groups": 114.0,
-   "Linux": 44.4,
-   "Linux+sessions": 44.5
+   "Linux": 44.4
   }
  },
+ "army_sessions": 80.00666666666667,
  "xv6": {
   "tests": {
    "xv6 round robin": 44.3,
