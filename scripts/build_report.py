@@ -156,13 +156,29 @@ a tick-dodging attacker still gets **{p(xt['MLFQ + allotment'])}** of the CPU wh
 almost nothing. Charging real elapsed time *and* ordering processes by CPU used (the idea behind
 Linux's scheduler) brings it down to exactly **{p(xt['MLFQ + allotment + precise + fair'], 1)}**.
 
-# 1. Questions
+# 1. Introduction
+
+The scheduler decides which process gets the CPU, so a process that can trick it can take CPU
+time from everyone else. Lecture 7 shows how the MLFQ tries to guess which jobs are interactive
+from their behaviour, and slides 16-18 admit that this guess can be abused. I wanted to know how
+true that is in practice: on real processes, inside a real kernel, and on the operating systems
+I actually use. The questions were:
 
 * **Q1.** Does the slide-17 trick really work on a real MLFQ with real processes, and how much
   CPU can an attacker steal?
 * **Q2.** Do the slide-18 fixes (priority boost, better accounting) stop it, and what do they cost?
 * **Q3.** Are there other ways to cheat that the slides do not mention (process army, tick dodge)?
 * **Q4.** Can the schedulers we use every day, Linux and Windows, be fooled?
+
+Contributions:
+
+* `usched`, a scheduler that runs the lecture's policies on real Linux processes, with every
+  fix from slide 18 (and per-user accounting) as a switch.
+* The lecture's MLFQ inside xv6, with four ways of charging CPU time, and a tick-dodging attacker.
+* Measurements of four attacks against 11 scheduler settings, Linux and Windows on the same laptop.
+* Two findings the slides do not mention: slide 18's fix fails when CPU is charged by timer ticks,
+  and on a systemd desktop a process army is only stopped by per-user cgroups with the CPU
+  controller switched on.
 
 # 2. Background
 
@@ -462,7 +478,23 @@ These are things that actually happened while building and measuring.
 9. **Porting xv6.** The current xv6-riscv renamed `sleep` to `pause` and changed `copyout`'s
    arguments, so code written for older xv6 versions did not compile as is.
 
-# 7. Limitations
+# 7. Related work
+
+* OSTEP chapter 8 describes the same MLFQ rules, the gaming problem and the boost, and comes with
+  a Python simulator of MLFQ. This project runs the same ideas on real processes and kernels
+  instead of a simulator.
+* Tsafrir, Etsion and Feitelson (2007) showed that tick-based CPU accounting can be cheated by
+  sleeping across clock ticks, on Linux 2.6, Windows and others at that time. The tick dodge here
+  re-uses that idea against an MLFQ in xv6, and re-checks Windows 11, where it no longer works.
+* Freezing processes with `SIGSTOP`/`SIGCONT` from user space is a known trick, used for example
+  by the `cpulimit` tool to cap a process's CPU use. Here it is used to run whole scheduling policies.
+* Stride scheduling (Waldspurger and Weihl) and EEVDF (Stoica and Abdel-Wahab, the basis of Linux's
+  current scheduler) are proportional-share schedulers; they are the "fair by design" side of the
+  comparison.
+* Implementing MLFQ in xv6 is a common course assignment. The new part here is attacking it and
+  showing which kind of accounting actually stops the attack.
+
+# 8. Limitations
 
 * `usched` is a user-space scheduler: it reacts to signals and messages, not to hardware
   interrupts, and its decisions take microseconds instead of nanoseconds. Section 4 shows the
@@ -471,7 +503,7 @@ These are things that actually happened while building and measuring.
 * The jobs announce their I/O; a kernel learns this from the blocking system call itself.
 * Linux numbers come from one laptop (and a VM during development); other kernels and desktops may differ.
 
-# 8. Conclusion
+# 9. Conclusion
 
 * **Slide 17 is right:** the textbook MLFQ is fooled by the I/O trick ({p(io['MLFQ'])} for the attacker)
   and starves CPU-bound jobs.
@@ -497,6 +529,8 @@ multicore load balancing, and repeating the Windows tests on more Windows versio
 5. Linux kernel documentation, "EEVDF Scheduler" and `sched(7)` (autogroup).
 6. M. Russinovich et al., *Windows Internals*, chapter on thread scheduling and priority boosts.
 7. MIT PDOS, xv6-riscv, <https://github.com/mit-pdos/xv6-riscv>.
+8. I. Stoica, H. Abdel-Wahab, "Earliest Eligible Virtual Deadline First: A Flexible and Accurate Mechanism for Proportional Share Resource Allocation", Old Dominion University TR-95-22, 1995.
+9. `sched(7)` and `cgroups(7)` Linux manual pages; systemd.resource-control(5).
 
 # Appendix: how to reproduce
 
