@@ -510,6 +510,30 @@ python3 scripts/build_report.py <machine-name>   # this report
 ```
 """
 
+# plainer style: no bold or italics in the body, fewer slogans
+import re
+REWRITE = [
+    ("Main results. The slide-17 trick works exactly as the slide predicts: against", "What I found: the slide-17 trick works as the slide says. Against"),
+    ("*Better accounting is only better if the accounting is accurate.*", "So better accounting only helps if the accounting itself is accurate."),
+    ("exactly fair. This is what Linux does.", "which is fair. Linux does basically the same thing."),
+    ("# 6. What surprised me and what broke", "# 6. Problems and surprises"),
+    ("These are things that actually happened while building and measuring.", "Things that went wrong or surprised me while building and measuring:"),
+    ("built into Linux.", "already built into Linux."),
+]
+def plain(text):
+    out, code = [], False
+    for line in text.split("\n"):
+        if line.startswith("```"):
+            code = not code
+        if not code and not line.startswith("---") and not line.startswith("title:"):
+            line = line.replace("**", "")
+            line = re.sub(r"(?<![\w*\\])\*(?=\S)([^*\n]+?)(?<=\S)\*(?![\w*])", r"\1", line)
+        out.append(line)
+    return "\n".join(out)
+for a, b in REWRITE:
+    md = md.replace(a, b)
+md = plain(md)
+
 os.makedirs(os.path.join(ROOT, "report"), exist_ok=True)
 open(os.path.join(ROOT, "report", "report.md"), "w").write(md)
 r = subprocess.run(["pandoc", "report.md", "-o", "report.pdf", "--pdf-engine=xelatex"],
